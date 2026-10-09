@@ -25,10 +25,11 @@ class Warehouse:
         for table in Table:
             path = table_path(self._settings, table)
             if path.exists():
+                # DDL cannot take bound parameters. The view name comes from the Table enum
+                # and the path from settings, quoted as a SQL string literal.
+                literal = "'" + path.as_posix().replace("'", "''") + "'"
                 self._con.execute(
-                    # Identifier comes from the Table enum, never from input.
-                    f"CREATE OR REPLACE VIEW {table} AS SELECT * FROM read_parquet(?)",  # noqa: S608
-                    [str(path)],
+                    f"CREATE OR REPLACE VIEW {table} AS SELECT * FROM read_parquet({literal})"  # noqa: S608
                 )
 
     def has(self, table: Table) -> bool:
