@@ -21,6 +21,10 @@ _SECTIONS: dict[str, Callable[[], object]] = {
     "fred": config.fred_settings,
     "open-meteo": config.open_meteo_settings,
     "database": config.database_settings,
+    "analysis": config.analysis_settings,
+    "forecast": config.forecast_settings,
+    "inventory": config.inventory_settings,
+    "publish": config.publish_settings,
 }
 
 
@@ -62,6 +66,17 @@ def train() -> None:
     typer.echo(f"best item model: {report['best_item_model']}")
     for model, scores in sorted(report["item_scores"].items(), key=lambda kv: kv[1]["nwrmsle"]):
         typer.echo(f"  {model:<18} NWRMSLE {scores['nwrmsle']:.4f}  WAPE {scores['wape']:.3f}")
+
+
+@app.command()
+def publish() -> None:
+    """Load the latest training artifacts into Postgres as the current release."""
+    from app.pipelines.publishing import run_publishing
+
+    result = run_publishing()
+    typer.echo(f"release {result['release_id']}")
+    for table, rows in result["rows"].items():
+        typer.echo(f"  {table:<22} {rows:>10,} rows")
 
 
 @app.command("check-config")
