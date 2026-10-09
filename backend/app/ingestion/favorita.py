@@ -7,8 +7,9 @@ from pathlib import Path
 
 import duckdb
 
-from app.config import KaggleSettings, StorageSettings
-from app.errors import ExternalServiceError
+from app.config import FavoritaSettings, HttpSettings, StorageSettings
+from app.errors import DataValidationError
+from app.ingestion.http_client import download_file
 from app.storage.catalog import Table, is_current, record_table, table_path
 
 logger = logging.getLogger(__name__)
@@ -96,10 +97,16 @@ SPECS: tuple[CsvSpec, ...] = (
 
 
 class FavoritaSource:
-    """Downloads the competition bundle once, then rebuilds only missing tables."""
+    """Downloads the competition archive once, then rebuilds only missing tables.
 
-    def __init__(self, kaggle: KaggleSettings, storage: StorageSettings) -> None:
-        self._kaggle = kaggle
+    The archive holds one zipped CSV per table (`train.csv.zip`, ...).
+    """
+
+    def __init__(
+        self, favorita: FavoritaSettings, http: HttpSettings, storage: StorageSettings
+    ) -> None:
+        self._favorita = favorita
+        self._http = http
         self._storage = storage
         self._raw_dir = storage.raw_dir / "favorita"
 
@@ -112,39 +119,33 @@ class FavoritaSource:
         for spec in pending:
             csv_path = self._ensure_csv(spec.file_name)
             rows = self._to_parquet(spec, csv_path)
-            record_table(self._storage, spec.table, rows=rows, source=f"kaggle:{spec.file_name}")
+            record_table(self._storage, spec.table, rows=rows, source=f"favorita:{spec.file_name}")
             logger.info("wrote table", extra={"table": spec.table, "rows": rows})
 
     def _ensure_csv(self, file_name: str) -> Path:
         csv_path = self._raw_dir / file_name
         if csv_path.exists():
             return csv_path
-        archive = self._raw_dir / f"{file_name}.7z"
-        if not archive.exists():
-            self._download_bundle()
-        import py7zr
-
-        logger.info("extracting", extra={"archive": archive.name})
-        with py7zr.SevenZipFile(archive) as seven:
-            seven.extractall(self._raw_dir)
+        inner = self._raw_dir / f"{file_name}.zip"
+        if not inner.exists():
+            self._download_archive()
+        logger.info("extracting", extra={"archive": inner.name})
+        with zipfile.ZipFile(inner) as zf:
+            zf.extract(file_name, self._raw_dir)
         return csv_path
 
-    def _download_bundle(self) -> None:
-        from kaggle.api.kaggle_api_extended import KaggleApi
-
-        self._raw_dir.mkdir(parents=True, exist_ok=True)
-        slug = self._kaggle.kaggle_competition
-        logger.info("downloading competition bundle", extra={"competition": slug})
-        api = KaggleApi()
-        api.authenticate()
-        try:
-            api.competition_download_files(slug, path=str(self._raw_dir), quiet=True)
-        except Exception as exc:
-            raise ExternalServiceError(f"kaggle download failed: {exc}") from exc
-        bundle = self._raw_dir / f"{slug}.zip"
-        with zipfile.ZipFile(bundle) as zf:
-            zf.extractall(self._raw_dir)
-        bundle.unlink()
+    def _download_archive(self) -> None:
+        archive = self._raw_dir / "favorita.zip"
+        if not archive.exists():
+            logger.info("downloading competition archive")
+            download_file(str(self._favorita.favorita_archive_url), archive, self._http)
+        with zipfile.ZipFile(archive) as zf:
+            members = [m for m in zf.namelist() if m.endswith(".csv.zip")]
+            if not members:
+                raise DataValidationError("archive contains no zipped CSV files")
+            for member in members:
+                target = self._raw_dir / Path(member).name
+                target.write_bytes(zf.read(member))
 
     def _to_parquet(self, spec: CsvSpec, csv_path: Path) -> int:
         target = table_path(self._storage, spec.table)

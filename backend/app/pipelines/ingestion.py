@@ -24,7 +24,7 @@ def run_ingestion(sources: set[Source], *, force: bool = False) -> list[CheckRes
     http = config.http_settings()
 
     if Source.FAVORITA in sources:
-        FavoritaSource(config.kaggle_settings(), storage).run(force=force)
+        FavoritaSource(config.favorita_settings(), http, storage).run(force=force)
 
     with open_warehouse(storage) as wh:
         start, end = wh.frame(

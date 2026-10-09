@@ -47,8 +47,10 @@ class HttpSettings(_Section):
     http_backoff_seconds: float = Field(default=1.0, gt=0)
 
 
-class KaggleSettings(_Section):
-    kaggle_competition: str = Field(description="Competition slug to download.")
+class FavoritaSettings(_Section):
+    favorita_archive_url: HttpUrl = Field(
+        description="Zip of the Favorita competition CSVs, each zipped individually."
+    )
 
 
 class FredSettings(_Section):
@@ -116,8 +118,8 @@ def http_settings() -> HttpSettings:
 
 
 @lru_cache
-def kaggle_settings() -> KaggleSettings:
-    return _load(KaggleSettings)
+def favorita_settings() -> FavoritaSettings:
+    return _load(FavoritaSettings)
 
 
 @lru_cache

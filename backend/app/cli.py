@@ -17,7 +17,7 @@ _SECTIONS: dict[str, Callable[[], object]] = {
     "runtime": config.runtime_settings,
     "storage": config.storage_settings,
     "http": config.http_settings,
-    "kaggle": config.kaggle_settings,
+    "favorita": config.favorita_settings,
     "fred": config.fred_settings,
     "open-meteo": config.open_meteo_settings,
     "database": config.database_settings,
