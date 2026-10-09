@@ -31,6 +31,7 @@ class LightGBMForecaster:
             "feature_fraction": s.lgbm_feature_fraction,
             "bagging_fraction": s.lgbm_bagging_fraction,
             "bagging_freq": 1,
+            "lambda_l2": s.lgbm_lambda_l2,
             "num_threads": s.n_jobs if s.n_jobs > 0 else 0,
             "seed": s.random_seed,
             "verbosity": -1,
