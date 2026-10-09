@@ -17,7 +17,9 @@ def _strength(component: np.ndarray, remainder: np.ndarray) -> float:
 
 
 def date_bounds(frame: pl.DataFrame) -> tuple[date, date]:
-    first, last = frame.select(pl.col("date").min(), pl.col("date").max()).row(0)
+    first, last = frame.select(
+        pl.col("date").min().alias("first"), pl.col("date").max().alias("last")
+    ).row(0)
     return first, last
 
 

@@ -203,7 +203,7 @@ def oil_granger(daily: pl.DataFrame, oil: pl.DataFrame, max_lag: int) -> list[Fi
     data = weekly.select("sales_growth", "oil_change").to_numpy()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", FutureWarning)
-        tests = grangercausalitytests(data, maxlag=max_lag, verbose=False)
+        tests = grangercausalitytests(data, maxlag=max_lag)
     by_lag = {
         str(lag): {
             "f_statistic": float(res[0]["ssr_ftest"][0]),
