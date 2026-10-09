@@ -85,6 +85,34 @@ class AnalysisSettings(_Section):
     analysis_seed: int = 7
 
 
+class ForecastSettings(_Section):
+    forecast_horizon: int = Field(default=16, ge=1)
+    item_history_days: int = Field(default=280, ge=120)
+    item_train_windows: int = Field(default=8, ge=1)
+    window_stride_days: int = Field(default=7, ge=1)
+    backtest_folds: int = Field(default=2, ge=1)
+    perishable_weight: float = Field(default=1.25, gt=0)
+    interval_quantiles: tuple[float, float] = (0.1, 0.9)
+    velocity_buckets: int = Field(default=5, ge=1)
+    lgbm_learning_rate: float = Field(default=0.05, gt=0)
+    lgbm_num_leaves: int = Field(default=127, ge=2)
+    lgbm_min_data_in_leaf: int = Field(default=200, ge=1)
+    lgbm_feature_fraction: float = Field(default=0.8, gt=0, le=1)
+    lgbm_bagging_fraction: float = Field(default=0.8, gt=0, le=1)
+    lgbm_max_rounds: int = Field(default=1500, ge=10)
+    lgbm_early_stopping_rounds: int = Field(default=75, ge=5)
+    mlp_hidden_sizes: tuple[int, ...] = (512, 256, 128)
+    mlp_dropout: float = Field(default=0.2, ge=0, lt=1)
+    mlp_epochs: int = Field(default=12, ge=1)
+    mlp_batch_size: int = Field(default=4096, ge=64)
+    mlp_learning_rate: float = Field(default=2e-3, gt=0)
+    family_history_days: int = Field(default=730, ge=120)
+    family_input_size: int = Field(default=112, ge=14)
+    family_max_steps: int = Field(default=800, ge=10)
+    random_seed: int = 7
+    n_jobs: int = Field(default=-1)
+
+
 class DatabaseSettings(_Section):
     """Read-write connection used by the pipeline and migrations."""
 
@@ -140,3 +168,8 @@ def database_settings() -> DatabaseSettings:
 @lru_cache
 def analysis_settings() -> AnalysisSettings:
     return _load(AnalysisSettings)
+
+
+@lru_cache
+def forecast_settings() -> ForecastSettings:
+    return _load(ForecastSettings)
