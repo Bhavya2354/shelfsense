@@ -40,6 +40,10 @@ class StorageSettings(_Section):
     def curated_dir(self) -> Path:
         return self.data_dir / "curated"
 
+    @property
+    def artifacts_dir(self) -> Path:
+        return self.data_dir / "artifacts"
+
 
 class HttpSettings(_Section):
     http_timeout_seconds: float = Field(default=30.0, gt=0)
@@ -109,6 +113,24 @@ class ForecastSettings(_Section):
     family_history_days: int = Field(default=730, ge=120)
     family_input_size: int = Field(default=112, ge=14)
     family_max_steps: int = Field(default=800, ge=10)
+    item_models: tuple[str, ...] = (
+        "moving_average",
+        "weekday_average",
+        "lightgbm",
+        "embedding_mlp",
+    )
+    lgbm_lambda_l2: float = Field(default=0.0, ge=0)
+    tuning_lightgbm_trials: int = Field(default=20, ge=0)
+    tuning_mlp_trials: int = Field(default=8, ge=0)
+    tuning_max_rounds: int = Field(default=500, ge=10)
+    tuning_mlp_epochs: int = Field(default=4, ge=1)
+    tuning_row_fraction: float = Field(default=0.5, gt=0, le=1)
+    chronos_model_id: str = Field(description="Hugging Face id of the Chronos-2 checkpoint.")
+    chronos_context_days: int = Field(default=365, ge=28)
+    chronos_finetune_steps: int = Field(default=300, ge=1)
+    chronos_finetune_learning_rate: float = Field(default=1e-5, gt=0)
+    chronos_batch_size: int = Field(default=64, ge=1)
+    bootstrap_resamples: int = Field(default=300, ge=50)
     random_seed: int = 7
     n_jobs: int = Field(default=-1)
 

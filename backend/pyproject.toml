@@ -29,9 +29,11 @@ dev = [
     "ruff>=0.8",
 ]
 pipeline = [
+    "chronos-forecasting>=2.3.2",
     "hierarchicalforecast>=1.5.3",
     "lightgbm>=4.7.0",
     "neuralforecast>=3.3.0",
+    "optuna>=5.0.0",
     "scipy>=1.18.1",
     "statsforecast>=2.1.1",
     "statsmodels>=0.15.0",
@@ -69,7 +71,7 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
 [[tool.mypy.overrides]]
-module = ["statsmodels.*", "scipy.*", "statsforecast.*", "neuralforecast.*", "hierarchicalforecast.*"]
+module = ["statsmodels.*", "scipy.*", "statsforecast.*", "neuralforecast.*", "hierarchicalforecast.*", "chronos.*", "optuna.*"]
 ignore_missing_imports = true
 
 [tool.uv]
