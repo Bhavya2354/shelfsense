@@ -20,6 +20,7 @@ _SECTIONS: dict[str, Callable[[], object]] = {
     "kaggle": config.kaggle_settings,
     "fred": config.fred_settings,
     "open-meteo": config.open_meteo_settings,
+    "database": config.database_settings,
 }
 
 

@@ -69,6 +69,14 @@ class OpenMeteoSettings(_Section):
     )
 
 
+class DatabaseSettings(_Section):
+    """Read-write connection used by the pipeline and migrations."""
+
+    database_url: SecretStr
+    database_pool_size: int = Field(default=5, ge=1)
+    database_statement_timeout_ms: int = Field(default=300_000, ge=1_000)
+
+
 def _load[S: _Section](section: type[S]) -> S:
     try:
         return section()
@@ -106,3 +114,8 @@ def fred_settings() -> FredSettings:
 @lru_cache
 def open_meteo_settings() -> OpenMeteoSettings:
     return _load(OpenMeteoSettings)
+
+
+@lru_cache
+def database_settings() -> DatabaseSettings:
+    return _load(DatabaseSettings)
