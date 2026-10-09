@@ -29,6 +29,27 @@ def _is_retryable(exc: BaseException) -> bool:
     return isinstance(exc, httpx.TransportError)
 
 
+def _retry_after_seconds(exc: BaseException | None) -> float | None:
+    """Seconds the server asked us to wait (only the delta-seconds form)."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        value = exc.response.headers.get("retry-after", "")
+        if value.isdigit():
+            return float(value)
+    return None
+
+
+class _WaitRespectingServer:
+    """Use the server's Retry-After when given, otherwise jittered exponential backoff."""
+
+    def __init__(self, backoff: float, ceiling: float) -> None:
+        self._fallback = wait_exponential_jitter(multiplier=backoff, max=ceiling)
+        self._ceiling = ceiling
+
+    def __call__(self, state: RetryCallState) -> float:
+        hinted = _retry_after_seconds(state.outcome.exception() if state.outcome else None)
+        return min(hinted, self._ceiling) if hinted is not None else self._fallback(state)
+
+
 def _log_retry(state: RetryCallState) -> None:
     exc = state.outcome.exception() if state.outcome else None
     logger.warning("retrying request", extra={"attempt": state.attempt_number, "error": repr(exc)})
@@ -53,7 +74,9 @@ class ApiClient:
         retrying = Retrying(
             retry=retry_if_exception(_is_retryable),
             stop=stop_after_attempt(self._settings.http_max_retries + 1),
-            wait=wait_exponential_jitter(multiplier=self._settings.http_backoff_seconds),
+            wait=_WaitRespectingServer(
+                self._settings.http_backoff_seconds, self._settings.http_max_backoff_seconds
+            ),
             before_sleep=_log_retry,
             reraise=True,
         )

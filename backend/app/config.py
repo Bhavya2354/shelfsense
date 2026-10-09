@@ -50,6 +50,7 @@ class HttpSettings(_Section):
     http_timeout_seconds: float = Field(default=30.0, gt=0)
     http_max_retries: int = Field(default=5, ge=0)
     http_backoff_seconds: float = Field(default=1.0, gt=0)
+    http_max_backoff_seconds: float = Field(default=120.0, gt=0)
     download_min_bytes_per_second: int = Field(default=150_000, ge=1)
     download_stall_window_seconds: float = Field(default=30.0, gt=0)
     download_max_reconnects: int = Field(default=200, ge=1)
@@ -71,6 +72,8 @@ class OpenMeteoSettings(_Section):
     open_meteo_archive_url: HttpUrl
     open_meteo_geocoding_url: HttpUrl
     weather_country_code: str = Field(min_length=2, max_length=2)
+    # Multi-year daily requests count as many calls against the free tier's per-minute cap.
+    weather_request_interval_seconds: float = Field(default=8.0, ge=0)
     weather_daily_variables: tuple[str, ...] = (
         "temperature_2m_mean",
         "temperature_2m_max",
