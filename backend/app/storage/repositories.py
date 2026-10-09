@@ -1,5 +1,6 @@
 """Write-side repositories used by the pipeline. The API has its own read-only queries."""
 
+import math
 import uuid
 from collections.abc import Iterable
 from datetime import date
@@ -65,7 +66,8 @@ class ModelRunRepository:
             model_name=model_name,
             level=level,
             params=params,
-            metrics=metrics,
+            # JSON has no Infinity/NaN; a non-finite score is stored as null.
+            metrics={k: v if math.isfinite(v) else None for k, v in metrics.items()},
             train_start=train_start,
             train_end=train_end,
         )
