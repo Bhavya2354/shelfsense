@@ -80,6 +80,18 @@ def publish() -> None:
         typer.echo(f"  {table:<22} {rows:>10,} rows")
 
 
+@app.command()
+def pipeline(
+    skip_ingest: Annotated[bool, typer.Option(help="Reuse curated data already on disk.")] = False,
+) -> None:
+    """Run every stage in order: ingest, analyze, train, publish."""
+    if not skip_ingest:
+        ingest(only=None, force=False)
+    analyze()
+    train()
+    publish()
+
+
 @app.command("check-config")
 def check_config() -> None:
     """Validate every settings section without printing any values."""
