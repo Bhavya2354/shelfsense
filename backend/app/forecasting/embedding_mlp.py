@@ -17,6 +17,8 @@ from app.forecasting.registry import register_item_model
 
 logger = logging.getLogger(__name__)
 
+_MIN_STD = 1e-3
+
 
 class _Network(nn.Module):
     def __init__(
@@ -66,13 +68,15 @@ class EmbeddingMLPForecaster:
         if train.target is None or valid.target is None:
             raise ValueError("the network needs targets for training and validation")
         torch.manual_seed(self._s.random_seed)
-        if self._s.n_jobs > 0:
-            torch.set_num_threads(self._s.n_jobs)
+        torch.set_num_threads(self._s.n_jobs)
         self._cat_idx = [train.names.index(c) for c in train.categorical]
         self._num_idx = [i for i in range(len(train.names)) if i not in self._cat_idx]
         numeric = train.x[:, self._num_idx]
         self._mean = numeric.mean(axis=0)
-        self._std = numeric.std(axis=0) + 1e-6
+        # Columns constant in training (e.g. a holiday flag that never fires) keep scale 1,
+        # otherwise any later non-zero value would be blown up by a near-zero divisor.
+        std = numeric.std(axis=0)
+        self._std = np.where(std < _MIN_STD, 1.0, std).astype(np.float32)
         # Codes seen only in later windows still need an embedding row.
         cardinalities = [
             int(max(train.x[:, i].max(), valid.x[:, i].max())) + 2 for i in self._cat_idx
