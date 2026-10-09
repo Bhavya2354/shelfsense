@@ -69,6 +69,20 @@ class OpenMeteoSettings(_Section):
     )
 
 
+class AnalysisSettings(_Section):
+    analysis_alpha: float = Field(default=0.05, gt=0, lt=1)
+    analysis_hac_lags: int = Field(default=14, ge=1)
+    analysis_fe_iterations: int = Field(default=20, ge=1)
+    analysis_family_window_days: int = Field(default=730, ge=60)
+    analysis_promo_window_days: int = Field(default=182, ge=28)
+    analysis_promo_min_coverage: float = Field(default=0.9, gt=0, le=1)
+    analysis_promo_series_per_family: int = Field(default=500, ge=10)
+    analysis_promo_min_series: int = Field(default=20, ge=2)
+    analysis_heavy_rain_mm: float = Field(default=10.0, gt=0)
+    analysis_granger_max_lag: int = Field(default=4, ge=1)
+    analysis_seed: int = 7
+
+
 class DatabaseSettings(_Section):
     """Read-write connection used by the pipeline and migrations."""
 
@@ -119,3 +133,8 @@ def open_meteo_settings() -> OpenMeteoSettings:
 @lru_cache
 def database_settings() -> DatabaseSettings:
     return _load(DatabaseSettings)
+
+
+@lru_cache
+def analysis_settings() -> AnalysisSettings:
+    return _load(AnalysisSettings)
