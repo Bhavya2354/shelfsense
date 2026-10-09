@@ -135,6 +135,24 @@ class ForecastSettings(_Section):
     n_jobs: int = Field(default=-1)
 
 
+class InventorySettings(_Section):
+    """Costs are fractions of an item's shelf price (Favorita publishes no prices)."""
+
+    underage_cost: float = Field(default=0.30, gt=0, description="Margin lost per unit short.")
+    overage_cost_perishable: float = Field(default=0.50, gt=0, description="Write-off per unit.")
+    overage_cost_shelf_stable: float = Field(default=0.03, gt=0, description="Holding per cycle.")
+    cover_days_perishable: int = Field(default=1, ge=1)
+    cover_days_shelf_stable: int = Field(default=7, ge=1)
+    residual_samples_per_bucket: int = Field(default=400, ge=50)
+
+
+class PublishSettings(_Section):
+    publish_top_series: int = Field(default=25_000, ge=100)
+    publish_history_days: int = Field(default=56, ge=7)
+    publish_family_history_days: int = Field(default=120, ge=14)
+    publish_keep_releases: int = Field(default=2, ge=1)
+
+
 class DatabaseSettings(_Section):
     """Read-write connection used by the pipeline and migrations."""
 
@@ -195,3 +213,13 @@ def analysis_settings() -> AnalysisSettings:
 @lru_cache
 def forecast_settings() -> ForecastSettings:
     return _load(ForecastSettings)
+
+
+@lru_cache
+def inventory_settings() -> InventorySettings:
+    return _load(InventorySettings)
+
+
+@lru_cache
+def publish_settings() -> PublishSettings:
+    return _load(PublishSettings)

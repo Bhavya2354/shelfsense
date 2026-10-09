@@ -65,6 +65,8 @@ ignore = ["PLR0913", "TRY003", "PLC0415"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+# numpy reductions are typed as Any; flagging every return of one adds noise, not safety.
+warn_return_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
