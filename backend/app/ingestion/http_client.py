@@ -37,13 +37,16 @@ def _log_retry(state: RetryCallState) -> None:
 class ApiClient:
     """Thin wrapper around `httpx.Client`; secrets passed as params never reach the logs."""
 
-    def __init__(self, base_url: str, settings: HttpSettings) -> None:
+    def __init__(
+        self, base_url: str, settings: HttpSettings, transport: httpx.BaseTransport | None = None
+    ) -> None:
         self._settings = settings
         self._http = httpx.Client(
             base_url=base_url,
             timeout=settings.http_timeout_seconds,
             headers={"Accept": "application/json"},
             follow_redirects=True,
+            transport=transport,
         )
 
     def get_json(self, path: str, params: dict[str, Any] | None = None) -> Any:
@@ -86,7 +89,9 @@ class _StalledError(Exception):
     """Throughput fell below the floor; reconnecting usually restores it."""
 
 
-def download_file(url: str, target: Path, settings: HttpSettings) -> Path:
+def download_file(
+    url: str, target: Path, settings: HttpSettings, transport: httpx.BaseTransport | None = None
+) -> Path:
     """Stream a large file to disk, resuming from a `.part` file after failures or stalls.
 
     Some CDNs throttle long-lived connections; a fresh ranged request restores
@@ -95,14 +100,22 @@ def download_file(url: str, target: Path, settings: HttpSettings) -> Path:
     partial = target.with_name(target.name + ".part")
     target.parent.mkdir(parents=True, exist_ok=True)
     timeout = httpx.Timeout(settings.http_timeout_seconds, read=settings.http_timeout_seconds * 4)
+    client = httpx.Client(timeout=timeout, follow_redirects=True, transport=transport)
+    try:
+        _download_loop(client, url, partial, settings)
+    finally:
+        client.close()
+    partial.replace(target)
+    return target
+
+
+def _download_loop(client: httpx.Client, url: str, partial: Path, settings: HttpSettings) -> None:
     failures = 0
     for _ in range(settings.download_max_reconnects):
         offset = partial.stat().st_size if partial.exists() else 0
         headers = {"Range": f"bytes={offset}-"} if offset else {}
         try:
-            with httpx.stream(
-                "GET", url, headers=headers, timeout=timeout, follow_redirects=True
-            ) as response:
+            with client.stream("GET", url, headers=headers) as response:
                 if response.status_code == httpx.codes.REQUESTED_RANGE_NOT_SATISFIABLE:
                     break
                 response.raise_for_status()
@@ -120,8 +133,6 @@ def download_file(url: str, target: Path, settings: HttpSettings) -> Path:
             time.sleep(settings.http_backoff_seconds * 2**failures)
     else:
         raise ExternalServiceError("download did not finish within the reconnect budget")
-    partial.replace(target)
-    return target
 
 
 def _copy_watching_speed(response: httpx.Response, sink: BinaryIO, settings: HttpSettings) -> None:
