@@ -1,6 +1,7 @@
 """Daily historical weather for every store city from the Open-Meteo archive."""
 
 import logging
+import time
 from datetime import date
 
 import polars as pl
@@ -33,7 +34,9 @@ class OpenMeteoWeatherSource:
 
         frames = []
         with ApiClient(str(self._meteo.open_meteo_archive_url), self._http) as client:
-            for loc in locations.iter_rows(named=True):
+            for i, loc in enumerate(locations.iter_rows(named=True)):
+                if i:
+                    time.sleep(self._meteo.weather_request_interval_seconds)
                 payload = client.get_json(
                     "",
                     {
