@@ -4,7 +4,7 @@ import logging
 import time
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, BinaryIO, Self
 
 import httpx
 from tenacity import (
@@ -82,14 +82,21 @@ class ApiClient:
         self.close()
 
 
-def download_file(
-    url: str, target: Path, settings: HttpSettings, chunk_bytes: int = 1 << 20
-) -> Path:
-    """Stream a large file to disk, resuming from a partial `.part` file after any failure."""
+class _StalledError(Exception):
+    """Throughput fell below the floor; reconnecting usually restores it."""
+
+
+def download_file(url: str, target: Path, settings: HttpSettings) -> Path:
+    """Stream a large file to disk, resuming from a `.part` file after failures or stalls.
+
+    Some CDNs throttle long-lived connections; a fresh ranged request restores
+    full speed, so slow streams are dropped and resumed rather than waited out.
+    """
     partial = target.with_name(target.name + ".part")
     target.parent.mkdir(parents=True, exist_ok=True)
     timeout = httpx.Timeout(settings.http_timeout_seconds, read=settings.http_timeout_seconds * 4)
-    for attempt in range(settings.http_max_retries + 1):
+    failures = 0
+    for _ in range(settings.download_max_reconnects):
         offset = partial.stat().st_size if partial.exists() else 0
         headers = {"Range": f"bytes={offset}-"} if offset else {}
         try:
@@ -101,13 +108,29 @@ def download_file(
                 response.raise_for_status()
                 resumed = response.status_code == httpx.codes.PARTIAL_CONTENT
                 with partial.open("ab" if resumed else "wb") as sink:
-                    for chunk in response.iter_bytes(chunk_bytes):
-                        sink.write(chunk)
+                    _copy_watching_speed(response, sink, settings)
             break
+        except _StalledError:
+            logger.info("download throttled, reconnecting", extra={"bytes": partial.stat().st_size})
         except (httpx.TransportError, httpx.HTTPStatusError) as exc:
-            if attempt == settings.http_max_retries or not _is_retryable(exc):
+            failures += 1
+            if failures > settings.http_max_retries or not _is_retryable(exc):
                 raise ExternalServiceError(f"download failed: {type(exc).__name__}") from None
-            logger.warning("download interrupted, resuming", extra={"attempt": attempt + 1})
-            time.sleep(settings.http_backoff_seconds * 2**attempt)
+            logger.warning("download interrupted, resuming", extra={"attempt": failures})
+            time.sleep(settings.http_backoff_seconds * 2**failures)
+    else:
+        raise ExternalServiceError("download did not finish within the reconnect budget")
     partial.replace(target)
     return target
+
+
+def _copy_watching_speed(response: httpx.Response, sink: BinaryIO, settings: HttpSettings) -> None:
+    window_start, window_bytes = time.monotonic(), 0
+    for chunk in response.iter_bytes(1 << 20):
+        sink.write(chunk)
+        window_bytes += len(chunk)
+        elapsed = time.monotonic() - window_start
+        if elapsed >= settings.download_stall_window_seconds:
+            if window_bytes / elapsed < settings.download_min_bytes_per_second:
+                raise _StalledError
+            window_start, window_bytes = time.monotonic(), 0

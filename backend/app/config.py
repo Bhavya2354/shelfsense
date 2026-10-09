@@ -49,6 +49,9 @@ class HttpSettings(_Section):
     http_timeout_seconds: float = Field(default=30.0, gt=0)
     http_max_retries: int = Field(default=5, ge=0)
     http_backoff_seconds: float = Field(default=1.0, gt=0)
+    download_min_bytes_per_second: int = Field(default=150_000, ge=1)
+    download_stall_window_seconds: float = Field(default=30.0, gt=0)
+    download_max_reconnects: int = Field(default=200, ge=1)
 
 
 class FavoritaSettings(_Section):
