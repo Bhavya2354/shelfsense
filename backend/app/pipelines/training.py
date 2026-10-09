@@ -297,6 +297,12 @@ def _family_scores(
     return rows, means
 
 
+def _day_column(first_day: date, horizon: int, repeats: int) -> pl.Series:
+    """Forecast dates for `repeats` series laid out series-major, as a Date column."""
+    days = pl.date_range(first_day, first_day + timedelta(days=horizon - 1), "1d", eager=True)
+    return pl.Series(np.tile(days.to_numpy(), repeats)).cast(pl.Date)
+
+
 def _bottom_up(panel: Panel, fold: ItemFold) -> pl.DataFrame:
     """Sum item-level ensemble forecasts (in units) up to store-family series."""
     horizon = fold.actual.shape[1]
@@ -307,9 +313,7 @@ def _bottom_up(panel: Panel, fold: ItemFold) -> pl.DataFrame:
     long = pl.DataFrame(
         {
             "unique_id": np.repeat(keys["unique_id"].to_numpy(), horizon),
-            "ds": np.tile(
-                [fold.first_day + timedelta(days=d) for d in range(horizon)], panel.n_series
-            ),
+            "ds": _day_column(fold.first_day, horizon, panel.n_series),
             "p50": units.ravel(),
         }
     )
@@ -333,9 +337,7 @@ def _item_frame(panel: Panel, first_day: date, columns: dict[str, np.ndarray]) -
     base = {
         "store_nbr": np.repeat(panel.keys["store_nbr"].to_numpy(), horizon),
         "item_nbr": np.repeat(panel.keys["item_nbr"].to_numpy(), horizon),
-        "target_date": np.tile(
-            [first_day + timedelta(days=d) for d in range(horizon)], panel.n_series
-        ),
+        "target_date": _day_column(first_day, horizon, panel.n_series),
     }
     return pl.DataFrame(base | {k: v.ravel() for k, v in columns.items()})
 
@@ -395,16 +397,18 @@ def run_training() -> dict[str, Any]:
             [
                 forecast_family(hierarchy, fold.first_day, settings),
                 forecast_foundation(hierarchy, fold.first_day, settings, out_dir),
-            ]
+            ],
+            how="vertical_relaxed",
         ).with_columns(pl.lit(fold.first_day).alias("first_day"))
         family_parts += [fc, _bottom_up(panel, fold).select(fc.columns)]
-    family_backtest = pl.concat(family_parts)
+    family_backtest = pl.concat(family_parts, how="vertical_relaxed")
     family_rows, family_summary = _family_scores(family_backtest, hierarchy, settings)
     family_release = pl.concat(
         [
             forecast_family(hierarchy, item.release_day, settings),
             forecast_foundation(hierarchy, item.release_day, settings, out_dir),
-        ]
+        ],
+        how="vertical_relaxed",
     )
 
     # Artifacts consumed by the publishing step.

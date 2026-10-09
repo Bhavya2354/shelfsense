@@ -88,8 +88,7 @@ def forecast_foundation(
     import torch
     from chronos import Chronos2Pipeline
 
-    if settings.n_jobs > 0:
-        torch.set_num_threads(settings.n_jobs)
+    torch.set_num_threads(settings.n_jobs)
     torch.manual_seed(settings.random_seed)
     h = settings.forecast_horizon
     history, future = _split(data, first_day, settings)
@@ -111,4 +110,4 @@ def forecast_foundation(
         )
     fine_tuned = _predict(tuned, history, future, h, FINE_TUNED)
     logger.info("chronos fine-tuned done", extra={"first_day": first_day})
-    return pl.concat([zero_shot, fine_tuned])
+    return pl.concat([zero_shot, fine_tuned], how="vertical_relaxed")
