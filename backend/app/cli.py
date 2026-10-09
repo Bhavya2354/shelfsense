@@ -44,6 +44,15 @@ def ingest(
         typer.echo(f"{'pass' if r.passed else r.severity:<8} {r.name:<28} {r.violations}")
 
 
+@app.command()
+def analyze() -> None:
+    """Run the statistical analyses and store the findings."""
+    from app.pipelines.analysis import run_analysis
+
+    for name, findings in run_analysis().items():
+        typer.echo(f"{name:<20} {len(findings)} findings")
+
+
 @app.command("check-config")
 def check_config() -> None:
     """Validate every settings section without printing any values."""
