@@ -1,6 +1,8 @@
 """Shared JSON-over-HTTP client with bounded retries for upstream data APIs."""
 
 import logging
+import time
+from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
 
@@ -78,3 +80,34 @@ class ApiClient:
         tb: TracebackType | None,
     ) -> None:
         self.close()
+
+
+def download_file(
+    url: str, target: Path, settings: HttpSettings, chunk_bytes: int = 1 << 20
+) -> Path:
+    """Stream a large file to disk, resuming from a partial `.part` file after any failure."""
+    partial = target.with_name(target.name + ".part")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    timeout = httpx.Timeout(settings.http_timeout_seconds, read=settings.http_timeout_seconds * 4)
+    for attempt in range(settings.http_max_retries + 1):
+        offset = partial.stat().st_size if partial.exists() else 0
+        headers = {"Range": f"bytes={offset}-"} if offset else {}
+        try:
+            with httpx.stream(
+                "GET", url, headers=headers, timeout=timeout, follow_redirects=True
+            ) as response:
+                if response.status_code == httpx.codes.REQUESTED_RANGE_NOT_SATISFIABLE:
+                    break
+                response.raise_for_status()
+                resumed = response.status_code == httpx.codes.PARTIAL_CONTENT
+                with partial.open("ab" if resumed else "wb") as sink:
+                    for chunk in response.iter_bytes(chunk_bytes):
+                        sink.write(chunk)
+            break
+        except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+            if attempt == settings.http_max_retries or not _is_retryable(exc):
+                raise ExternalServiceError(f"download failed: {type(exc).__name__}") from None
+            logger.warning("download interrupted, resuming", extra={"attempt": attempt + 1})
+            time.sleep(settings.http_backoff_seconds * 2**attempt)
+    partial.replace(target)
+    return target
