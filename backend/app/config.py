@@ -60,6 +60,13 @@ class FredSettings(_Section):
 class OpenMeteoSettings(_Section):
     open_meteo_archive_url: HttpUrl
     open_meteo_geocoding_url: HttpUrl
+    weather_country_code: str = Field(min_length=2, max_length=2)
+    weather_daily_variables: tuple[str, ...] = (
+        "temperature_2m_mean",
+        "temperature_2m_max",
+        "precipitation_sum",
+        "precipitation_hours",
+    )
 
 
 def _load[S: _Section](section: type[S]) -> S:
