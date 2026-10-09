@@ -1,0 +1,111 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Design tokens. Charts read the same variables at runtime. */
+:root {
+  --paper: #f6f4ef;
+  --surface: #ffffff;
+  --sunken: #efece5;
+  --ink: #1c1b19;
+  --ink-soft: #45423c;
+  --muted: #6f6a61;
+  --line: #e2ded4;
+  --accent: #1f5e4b;
+  --accent-soft: #d8e8e1;
+  --band: rgb(31 94 75 / 0.16);
+  --amber: #a86b12;
+  --red: #b23a30;
+  --chart-1: #1f5e4b;
+  --chart-2: #c4762b;
+  --chart-3: #4f6d9a;
+  --chart-4: #8a5a83;
+  --chart-5: #7a8b3c;
+  --chart-6: #9a8f80;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121311;
+    --surface: #1a1c19;
+    --sunken: #151714;
+    --ink: #ecebe6;
+    --ink-soft: #c9c6bd;
+    --muted: #9a968c;
+    --line: #2b2e29;
+    --accent: #63b597;
+    --accent-soft: #1f3a30;
+    --band: rgb(99 181 151 / 0.2);
+    --amber: #e0a34a;
+    --red: #e07a6f;
+    --chart-1: #63b597;
+    --chart-2: #e09a55;
+    --chart-3: #7f9fd0;
+    --chart-4: #c08ab8;
+    --chart-5: #a9bb64;
+    --chart-6: #8f877b;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #121311;
+  --surface: #1a1c19;
+  --sunken: #151714;
+  --ink: #ecebe6;
+  --ink-soft: #c9c6bd;
+  --muted: #9a968c;
+  --line: #2b2e29;
+  --accent: #63b597;
+  --accent-soft: #1f3a30;
+  --band: rgb(99 181 151 / 0.2);
+  --amber: #e0a34a;
+  --red: #e07a6f;
+  --chart-1: #63b597;
+  --chart-2: #e09a55;
+  --chart-3: #7f9fd0;
+  --chart-4: #c08ab8;
+  --chart-5: #a9bb64;
+  --chart-6: #8f877b;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-amber: var(--amber);
+  --color-red: var(--red);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
