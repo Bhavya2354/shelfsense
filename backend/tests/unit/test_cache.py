@@ -20,8 +20,8 @@ def test_evicts_least_recently_used() -> None:
     cache.get_or_compute("b", lambda: 2)
     cache.get_or_compute("a", lambda: 1)  # refresh "a"
     cache.get_or_compute("c", lambda: 3)  # evicts "b"
-    assert cache.get_or_compute("b", lambda: "recomputed") == "recomputed"
     assert cache.get_or_compute("a", lambda: "stale") == 1
+    assert cache.get_or_compute("b", lambda: "recomputed") == "recomputed"
 
 
 def test_zero_ttl_disables_caching() -> None:
