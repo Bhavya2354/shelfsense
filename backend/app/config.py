@@ -1,0 +1,101 @@
+"""Typed settings, read from the environment (and `.env` in local development).
+
+Each component loads only the section it needs, so a process fails fast on the
+settings it actually depends on. Environment-specific values (paths, URLs,
+credentials) have no defaults; only operational tunables do.
+"""
+
+from functools import lru_cache
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field, HttpUrl, SecretStr, ValidationError
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.errors import ConfigurationError
+
+
+class _Section(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        frozen=True,
+    )
+
+
+class RuntimeSettings(_Section):
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_format: Literal["json", "console"] = "json"
+
+
+class StorageSettings(_Section):
+    data_dir: Path = Field(description="Root folder for raw, curated and model data.")
+
+    @property
+    def raw_dir(self) -> Path:
+        return self.data_dir / "raw"
+
+    @property
+    def curated_dir(self) -> Path:
+        return self.data_dir / "curated"
+
+
+class HttpSettings(_Section):
+    http_timeout_seconds: float = Field(default=30.0, gt=0)
+    http_max_retries: int = Field(default=5, ge=0)
+    http_backoff_seconds: float = Field(default=1.0, gt=0)
+
+
+class KaggleSettings(_Section):
+    kaggle_competition: str = Field(description="Competition slug to download.")
+
+
+class FredSettings(_Section):
+    fred_api_key: SecretStr
+    fred_base_url: HttpUrl
+    fred_oil_series_id: str
+
+
+class OpenMeteoSettings(_Section):
+    open_meteo_archive_url: HttpUrl
+    open_meteo_geocoding_url: HttpUrl
+
+
+def _load[S: _Section](section: type[S]) -> S:
+    try:
+        return section()
+    except ValidationError as exc:
+        fields = sorted({str(err["loc"][0]).upper() for err in exc.errors()})
+        message = f"{section.__name__}: missing or invalid settings: {', '.join(fields)}"
+        raise ConfigurationError(message) from None
+
+
+@lru_cache
+def runtime_settings() -> RuntimeSettings:
+    return _load(RuntimeSettings)
+
+
+@lru_cache
+def storage_settings() -> StorageSettings:
+    return _load(StorageSettings)
+
+
+@lru_cache
+def http_settings() -> HttpSettings:
+    return _load(HttpSettings)
+
+
+@lru_cache
+def kaggle_settings() -> KaggleSettings:
+    return _load(KaggleSettings)
+
+
+@lru_cache
+def fred_settings() -> FredSettings:
+    return _load(FredSettings)
+
+
+@lru_cache
+def open_meteo_settings() -> OpenMeteoSettings:
+    return _load(OpenMeteoSettings)
