@@ -53,6 +53,17 @@ def analyze() -> None:
         typer.echo(f"{name:<20} {len(findings)} findings")
 
 
+@app.command()
+def train() -> None:
+    """Backtest every model, then train the release forecast."""
+    from app.pipelines.training import run_training
+
+    report = run_training()
+    typer.echo(f"best item model: {report['best_item_model']}")
+    for model, scores in sorted(report["item_scores"].items(), key=lambda kv: kv[1]["nwrmsle"]):
+        typer.echo(f"  {model:<18} NWRMSLE {scores['nwrmsle']:.4f}  WAPE {scores['wape']:.3f}")
+
+
 @app.command("check-config")
 def check_config() -> None:
     """Validate every settings section without printing any values."""
