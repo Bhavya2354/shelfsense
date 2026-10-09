@@ -53,7 +53,7 @@ class ApiClient:
         retrying = Retrying(
             retry=retry_if_exception(_is_retryable),
             stop=stop_after_attempt(self._settings.http_max_retries + 1),
-            wait=wait_exponential_jitter(initial=self._settings.http_backoff_seconds),
+            wait=wait_exponential_jitter(multiplier=self._settings.http_backoff_seconds),
             before_sleep=_log_retry,
             reraise=True,
         )

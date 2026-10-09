@@ -49,11 +49,11 @@ CurrentRelease = Annotated[Release, Depends(get_release)]
 class PageParams:
     def __init__(self, settings: Settings, page: int = 1, page_size: int | None = None) -> None:
         if page < 1:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "page starts at 1")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "page starts at 1")
         size = page_size or settings.api_default_page_size
         if not 1 <= size <= settings.api_max_page_size:
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 f"page_size must be between 1 and {settings.api_max_page_size}",
             )
         self.page = page

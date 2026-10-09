@@ -22,11 +22,11 @@ def _verdict(adf_p: float, kpss_p: float, alpha: float) -> str:
 def stationarity_tests(series: np.ndarray, alpha: float) -> list[Finding]:
     findings: list[Finding] = []
     for name, values in (("log_level", series), ("log_diff", np.diff(series))):
-        adf_stat, adf_p, *_ = adfuller(values, autolag="AIC")
+        adf_stat, adf_p, *_ = adfuller(values, autolag="AIC", result_object=False)
         with warnings.catch_warnings():
             # KPSS p-values are table-interpolated and clipped to [0.01, 0.1].
             warnings.simplefilter("ignore", InterpolationWarning)
-            kpss_stat, kpss_p, *_ = kpss(values, regression="c", nlags="auto")
+            kpss_stat, kpss_p, *_ = kpss(values, regression="c", nlags="auto", result_object=False)
         findings.append(
             (
                 name,
