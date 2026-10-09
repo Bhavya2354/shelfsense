@@ -58,13 +58,13 @@ def load_hierarchy(
             WHERE date BETWEEN ? AND ? GROUP BY ALL
         )
         SELECT 'all' AS country, p.store_nbr::VARCHAR AS store_nbr, p.family, d.ds,
-               CASE WHEN d.ds <= ? THEN coalesce(o.y, 0) END AS y,
+               coalesce(o.y, 0) AS y,
                coalesce(o.promo, pl.promo, 0)::DOUBLE AS promo
         FROM pairs p CROSS JOIN days d
         LEFT JOIN observed o USING (store_nbr, family, ds)
         LEFT JOIN planned pl USING (store_nbr, family, ds)
         """,
-        [start, end, start, last_observed, last_observed + timedelta(days=1), end, last_observed],
+        [start, end, start, last_observed, last_observed + timedelta(days=1), end],
     )
     # Drop store-families that never sell (some stores carry no items of a family).
     active = bottom.group_by("store_nbr", "family").agg(pl.col("y").sum()).filter(pl.col("y") > 0)
@@ -72,6 +72,8 @@ def load_hierarchy(
     from hierarchicalforecast.utils import aggregate
 
     frame, summing, tags = aggregate(bottom.to_pandas(), HIERARCHY, exog_vars={"promo": "sum"})
+    frame = frame.rename(columns={"promo_sum": "promo"})
+    # Future days were zero-filled for aggregation; they are unknown, not zero.
     future = frame["ds"] > pd.Timestamp(last_observed)
     frame.loc[future, "y"] = float("nan")
     return FamilyHierarchy(frame, summing, tags, last_observed)
