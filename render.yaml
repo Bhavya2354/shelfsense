@@ -1,0 +1,17 @@
+# Render blueprint for the API. Secrets are entered in the Render dashboard, never here.
+services:
+  - type: web
+    name: shelfsense-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/api.Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: API_DATABASE_URL
+        sync: false
+      - key: API_CORS_ORIGINS
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
