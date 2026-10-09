@@ -14,11 +14,9 @@ from app.storage.catalog import Table, table_path
 class Warehouse:
     """Exposes each curated Parquet file as a DuckDB view named after its table."""
 
-    def __init__(self, settings: StorageSettings, *, memory_limit: str | None = None) -> None:
+    def __init__(self, settings: StorageSettings) -> None:
         self._settings = settings
-        self._con = duckdb.connect()
-        if memory_limit:
-            self._con.execute(f"SET memory_limit = '{memory_limit}'")
+        self._con = duckdb.connect(config={"memory_limit": settings.duckdb_memory_limit})
         self.refresh()
 
     def refresh(self) -> None:
@@ -47,8 +45,8 @@ class Warehouse:
 
 
 @contextmanager
-def open_warehouse(settings: StorageSettings, **kwargs: Any) -> Iterator[Warehouse]:
-    warehouse = Warehouse(settings, **kwargs)
+def open_warehouse(settings: StorageSettings) -> Iterator[Warehouse]:
+    warehouse = Warehouse(settings)
     try:
         yield warehouse
     finally:

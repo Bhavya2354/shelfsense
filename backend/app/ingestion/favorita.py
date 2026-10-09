@@ -150,7 +150,7 @@ class FavoritaSource:
     def _to_parquet(self, spec: CsvSpec, csv_path: Path) -> int:
         target = table_path(self._storage, spec.table)
         tmp = target.with_suffix(".parquet.tmp")
-        con = duckdb.connect()
+        con = duckdb.connect(config={"memory_limit": self._storage.duckdb_memory_limit})
         try:
             # The projection and target path come from the static SPECS table above.
             copy_sql = f"""

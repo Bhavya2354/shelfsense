@@ -31,6 +31,7 @@ class RuntimeSettings(_Section):
 
 class StorageSettings(_Section):
     data_dir: Path = Field(description="Root folder for raw, curated and model data.")
+    duckdb_memory_limit: str = Field(default="4GB", pattern=r"^\d+(\.\d+)?\s?(MB|GB)$")
 
     @property
     def raw_dir(self) -> Path:
@@ -135,7 +136,8 @@ class ForecastSettings(_Section):
     chronos_batch_size: int = Field(default=64, ge=1)
     bootstrap_resamples: int = Field(default=300, ge=50)
     random_seed: int = 7
-    n_jobs: int = Field(default=-1)
+    # Each worker loads the full modelling stack; keep headroom on a 16 GB machine.
+    n_jobs: int = Field(default=6, ge=1)
 
 
 class InventorySettings(_Section):

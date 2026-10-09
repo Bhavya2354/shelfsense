@@ -61,7 +61,7 @@ def tune_lightgbm(
             "metric": "l2",
             "verbosity": -1,
             "seed": settings.random_seed,
-            "num_threads": settings.n_jobs if settings.n_jobs > 0 else 0,
+            "num_threads": settings.n_jobs,
             "bagging_freq": 1,
             "learning_rate": trial.suggest_float("lgbm_learning_rate", 0.02, 0.12, log=True),
             "num_leaves": trial.suggest_int("lgbm_num_leaves", 31, 255, log=True),
