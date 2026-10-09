@@ -153,6 +153,19 @@ class PublishSettings(_Section):
     publish_keep_releases: int = Field(default=2, ge=1)
 
 
+class ApiSettings(_Section):
+    """The API connects as a read-only role; it never needs write access."""
+
+    api_database_url: SecretStr
+    api_cors_origins: list[str] = Field(description="Exact origins allowed to call the API.")
+    api_pool_size: int = Field(default=5, ge=1)
+    api_cache_ttl_seconds: int = Field(default=300, ge=0)
+    api_cache_max_entries: int = Field(default=2_000, ge=10)
+    api_default_page_size: int = Field(default=50, ge=1)
+    api_max_page_size: int = Field(default=200, ge=1)
+    api_statement_timeout_ms: int = Field(default=5_000, ge=100)
+
+
 class DatabaseSettings(_Section):
     """Read-write connection used by the pipeline and migrations."""
 
@@ -223,3 +236,8 @@ def inventory_settings() -> InventorySettings:
 @lru_cache
 def publish_settings() -> PublishSettings:
     return _load(PublishSettings)
+
+
+@lru_cache
+def api_settings() -> ApiSettings:
+    return _load(ApiSettings)

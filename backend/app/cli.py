@@ -25,6 +25,7 @@ _SECTIONS: dict[str, Callable[[], object]] = {
     "forecast": config.forecast_settings,
     "inventory": config.inventory_settings,
     "publish": config.publish_settings,
+    "api": config.api_settings,
 }
 
 
