@@ -85,20 +85,30 @@ def run_publishing() -> dict[str, Any]:
             """,
             [origin, publish.publish_history_days],
         ).join(top, on=["store_nbr", "item_nbr"])
-        family_history = wh.frame(
+        family_daily = wh.frame(
             """
-            WITH daily AS (
-                SELECT s.store_nbr, i.family, s.date AS sale_date,
-                       sum(greatest(s.unit_sales, 0)) AS unit_sales
-                FROM sales s JOIN items i USING (item_nbr)
-                WHERE s.date > ?::DATE - ?::INTEGER GROUP BY ALL
-            )
-            SELECT * FROM daily
-            UNION ALL SELECT store_nbr, 'ALL', sale_date, sum(unit_sales) FROM daily GROUP BY ALL
-            UNION ALL SELECT 0, 'ALL', sale_date, sum(unit_sales) FROM daily GROUP BY ALL
+            SELECT s.store_nbr, i.family, s.date AS sale_date,
+                   sum(greatest(s.unit_sales, 0)) AS unit_sales
+            FROM sales s JOIN items i USING (item_nbr)
+            WHERE s.date > ?::DATE - ?::INTEGER GROUP BY ALL
             """,
             [origin, publish.publish_family_history_days],
         )
+    # Store and national totals are rolled up here rather than in one SQL statement:
+    # DuckDB 1.5 can hang when a parameterised CTE is referenced several times.
+    store_totals = family_daily.group_by("store_nbr", "sale_date").agg(
+        pl.lit(ALL_FAMILIES).alias("family"), pl.col("unit_sales").sum()
+    )
+    national = family_daily.group_by("sale_date").agg(
+        pl.lit(NATIONAL_STORE, dtype=pl.Int16).alias("store_nbr"),
+        pl.lit(ALL_FAMILIES).alias("family"),
+        pl.col("unit_sales").sum(),
+    )
+    columns = ["store_nbr", "family", "sale_date", "unit_sales"]
+    family_history = pl.concat(
+        [family_daily.select(columns), store_totals.select(columns), national.select(columns)],
+        how="vertical_relaxed",
+    )
     quality_path = storage.curated_dir / "_quality.json"
     quality = json.loads(quality_path.read_text(encoding="utf-8")) if quality_path.exists() else []
 
