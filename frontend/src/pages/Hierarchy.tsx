@@ -19,7 +19,7 @@ import {
 } from "../components/ui";
 import { fmtMetric, fmtPct, modelLabel, titleCase } from "../lib/format";
 
-const DEFAULT_MODELS = ["ensemble_mint", "chronos2_finetuned", "TFT"];
+const DEFAULT_MODELS = ["chronos2_finetuned", "Ensemble", "NBEATS"];
 
 function ModelTable() {
   const models = useModels("family");
